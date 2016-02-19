@@ -85,6 +85,7 @@ class listener implements EventSubscriberInterface
 	{
 		$sfpo_array = $event['forum_data'];
 		$sfpo_array['sfpo_guest_enable'] = $this->request->variable('sfpo_guest_enable', 0);
+		$sfpo_array['sfpo_guest_enable_timeout'] = $this->request->variable('sfpo_guest_enable_timeout', 0);
 		$sfpo_array['sfpo_characters'] = $this->request->variable('sfpo_characters', 0);
 		$event['forum_data'] = $sfpo_array;
 	}
@@ -96,6 +97,7 @@ class listener implements EventSubscriberInterface
 		{
 			$sfpo_array = $event['forum_data'];
 			$sfpo_array['sfpo_guest_enable'] = (int) 0;
+			$sfpo_array['sfpo_guest_enable_timeout'] = (int) 0;
 			$sfpo_array['sfpo_characters'] = (int) 150;
 			$event['forum_data'] = $sfpo_array;
 		}
@@ -106,6 +108,7 @@ class listener implements EventSubscriberInterface
 	{
 		$sfpo_array = $event['template_data'];
 		$sfpo_array['S_SFPO_GUEST_ENABLE'] = $event['forum_data']['sfpo_guest_enable'];
+		$sfpo_array['S_SFPO_GUEST_ENABLE_TIMEOUT'] = $event['forum_data']['sfpo_guest_enable_timeout'];
 		$sfpo_array['S_SFPO_CHARACTERS'] = $event['forum_data']['sfpo_characters'];
 		$event['template_data'] = $sfpo_array;
 	}
@@ -138,6 +141,19 @@ class listener implements EventSubscriberInterface
 		$event['start'] = $start;
 	}
 
+	function check_sfpo($event)
+	{
+		$topic_data = $event['topic_data'];
+		$s_sfpo = (!empty($topic_data['sfpo_guest_enable']) && ($this->user->data['user_id'] == ANONYMOUS));
+		
+		if ($s_sfpo && !empty($topic_data['sfpo_guest_enable_timeout'] && $topic_data['sfpo_guest_enable_timeout'] > 0))
+		{
+			$s_sfpo = isset($this->user->data['session_start']) && ($this->user->time_now - $this->user->data['session_start']) > $topic_data['sfpo_guest_enable_timeout'];
+		}
+
+		return $s_sfpo;
+	}
+	
 	/**
 	* Forum check
 	*
@@ -150,8 +166,15 @@ class listener implements EventSubscriberInterface
 		$topic_data = $event['topic_data'];
 		$sql_ary = $event['sql_ary'];
 		$post_list = $event['post_list'];
-		$s_sfpo = (!empty($topic_data['sfpo_guest_enable']) && ($this->user->data['user_id'] == ANONYMOUS));
+		
+		
+		$s_sfpo = $this->check_sfpo($event); 
+		//$s_sfpo = (!empty($topic_data['sfpo_guest_enable']) && ($this->user->data['user_id'] == ANONYMOUS));
+		
+		//if ($s_sfpo && !empty($topic_data['sfpo_guest_enable_timeout'] && $topic_data['sfpo_guest_enable_timeout'] > 0)
+		//	$s_sfpo = isset($this->user->data['session_start']) && ($this->user->time_now - $this->user->data['session_start']) > $topic_data['sfpo_guest_enable_timeout'];
 
+		//error_log('session info:' . print_r($this->user->data, true) . ' start: ' . $this->user->data['session_start'] );
 		if ($s_sfpo)
 		{
 			$this->user->add_lang_ext('rmcgirr83/sfpo', 'common');
@@ -177,7 +200,8 @@ class listener implements EventSubscriberInterface
 		$post_data = $event['row'];
 		$post_template = $event['post_row'];
 
-		$s_sfpo = (!empty($topic_data['sfpo_guest_enable']) && ($this->user->data['user_id'] == ANONYMOUS));
+		//$s_sfpo = (!empty($topic_data['sfpo_guest_enable']) && ($this->user->data['user_id'] == ANONYMOUS));
+		$s_sfpo = $this->check_sfpo($event); 
 
 		if ($s_sfpo && !empty($topic_data['sfpo_characters']))
 		{
