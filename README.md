@@ -1,3 +1,5 @@
+Fork adding a timeout - sfpo is enabled only after this timeout is finished.
+
 Show First Post Only to Guest
 ===============
 
